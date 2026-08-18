@@ -64,9 +64,9 @@ func TestSanitizeMap_NestedStructures(t *testing.T) {
 
 func TestSanitizeMap_CaseInsensitive(t *testing.T) {
 	input := map[string]interface{}{
-		"AuthToken":  "secret-123",
-		"KubeConfig": "cluster-config",
-		"PASSWORD":   "pass-456",
+		"AuthToken":   "secret-123",
+		"KubeConfig":  "cluster-config",
+		"PASSWORD":    "pass-456",
 		"publicField": "public-val",
 	}
 
@@ -104,5 +104,71 @@ func TestSanitizeJSON_ValidJSON(t *testing.T) {
 	}
 	if resultMap["status"] != "active" {
 		t.Errorf("expected status to remain active, got %v", resultMap["status"])
+	}
+}
+
+// ==================== OMOLADE ACCEPTANCE CRITERIA TESTS ====================
+
+// Criteria 1: Non-Mutation / Immutability Test
+func TestSanitizeMap_Immutability(t *testing.T) {
+	original := map[string]interface{}{
+		"token": "raw-secret-token",
+		"name":  "test-cluster",
+	}
+
+	_ = SanitizeMap(original)
+
+	// Verify original caller map was not mutated in-place
+	if original["token"] != "raw-secret-token" {
+		t.Errorf("expected original caller map to remain immutable, but token was mutated: %v", original["token"])
+	}
+}
+
+// Criteria 2: Precision Key Matching (Avoid Over-Redaction)
+func TestSanitizeMap_PrecisionKeyMatching(t *testing.T) {
+	input := map[string]interface{}{
+		"author":     "Peaush Paul",
+		"authority":  "CNCF",
+		"auth_token": "secret-bearer-123",
+	}
+
+	sanitized := SanitizeMap(input)
+
+	if sanitized["author"] != "Peaush Paul" {
+		t.Errorf("over-redaction bug: author should NOT be redacted, got %v", sanitized["author"])
+	}
+	if sanitized["authority"] != "CNCF" {
+		t.Errorf("over-redaction bug: authority should NOT be redacted, got %v", sanitized["authority"])
+	}
+	if sanitized["auth_token"] != "[REDACTED_SECRET]" {
+		t.Errorf("expected auth_token to be redacted, got %v", sanitized["auth_token"])
+	}
+}
+
+// Criteria 3: Sensitive Data in Error Paths
+func TestSanitizeString_ErrorPathRedaction(t *testing.T) {
+	errStr := "connection failed: auth_token=secret-xyz-789"
+	sanitized := SanitizeString(errStr)
+
+	expected := "connection failed: auth_token=[REDACTED_SECRET]"
+	if sanitized != expected {
+		t.Errorf("expected error string to redact token, got '%s'", sanitized)
+	}
+}
+
+// Criteria 4: Malformed or Nil Input Resilience
+func TestSanitizeMap_NilOrEmptyHandling(t *testing.T) {
+	var nilMap map[string]interface{} = nil
+	if res := SanitizeMap(nilMap); res != nil {
+		t.Errorf("expected nil result for nil map input, got %v", res)
+	}
+
+	emptyJSON := []byte(``)
+	resBytes, err := SanitizeJSON(emptyJSON)
+	if err != nil {
+		t.Fatalf("unexpected error on empty JSON: %v", err)
+	}
+	if len(resBytes) != 0 {
+		t.Errorf("expected empty byte response for empty input, got %s", string(resBytes))
 	}
 }

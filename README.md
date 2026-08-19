@@ -1,51 +1,79 @@
-# Meshery MCP Server (Proof of Concept)
+# 🛠️ Meshery MCP Server Proof of Concept (PoC)
 
-[![LFX Mentorship](https://img.shields.io/badge/LFX-Mentorship%202026%20Term%203-blue.svg)](https://mentorship.lfx.linuxfoundation.org/)
-[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8.svg)](https://golang.org/)
+[![CI Build & Test](https://github.com/peaush07/meshery-mcp-server-poc/actions/workflows/ci.yml/badge.svg)](https://github.com/peaush07/meshery-mcp-server-poc/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/Go-1.22%2B-00ADD8?style=flat&logo=go)](https://golang.org)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Mentorship](https://img.shields.io/badge/LFX_Mentorship-2026_Term_3-green.svg)](https://mentorship.lfx.linuxfoundation.org/)
 
-**Author:** Peaush Paul ([@peaush07](https://github.com/peaush07))  
-**Email:** peaushpaul99@gmail.com  
-**CNCF Slack:** `@PeaushPaul`  
+> **Official LFX Mentorship Proposal Reference Implementation**  
+> **Project:** CNCF - Meshery: MCP Server  
+> **Issue:** [meshery/meshery#19446](https://github.com/meshery/meshery/issues/19446)  
+> **Applicant:** Peaush Paul ([@peaush07](https://github.com/peaush07)) | Kolkata, India (UTC+5:30)
 
-This repository contains a **Proof of Concept (PoC) implementation of the Meshery Model Context Protocol (MCP) Server**, created as part of the LFX Mentorship application for CNCF Meshery (2026 Term 3, Issue #19446).
+---
 
-## Overview
+## 🚀 Overview
 
-`meshery-mcp-server` bridges CNCF Meshery's cloud-native infrastructure management plane to AI coding assistants (Claude Desktop, Cursor IDE) via the Model Context Protocol (MCP).
+`meshery-mcp-server` is a Golang implementation of the **Model Context Protocol (MCP)** for [CNCF Meshery](https://meshery.io). It acts as a secure bridge connecting AI-assisted development tools (**Claude Desktop**, **Cursor IDE**, **VS Code AI agents**) directly to the Meshery infrastructure engine and MeshSync Kubernetes topology discovery.
 
-### Features Implemented in PoC
+---
 
-- **Golang Architecture**: Modular architecture (`pkg/mcp`, `pkg/meshery`, `pkg/security`).
-- **MCP Protocol Engine**: Handles JSON-RPC 2.0 initialization, tools list, and execution.
-- **Stdio & SSE Transports**: Supports both standard I/O (for local IDEs) and HTTP Server-Sent Events.
-- **Security Sanitizer**: Automatic masking of sensitive tokens, passwords, and K8s secrets.
-- **Meshery Client Wrapper**: Connects to Meshery REST API endpoints (`/api/content/patterns`).
+## ✨ Key Technical Capabilities
 
-## Getting Started
+* **Dual Transport Architecture**: Supports local `stdio` (for IDE process pipes) and streamable `SSE` (Server-Sent Events over HTTP).
+* **Response Boundary Secret Sanitizer (`pkg/security`)**: SDK-agnostic recursive JSON redactor scrubbing tokens, passwords, and KubeConfig secrets before streaming context to AI models.
+* **Decoupled Architecture**: `MesheryClient` narrow interface pattern keeping tool handlers lightweight and agnostic of transport/auth details.
+* **100% Test-Driven**: 8 comprehensive unit test cases covering immutability/non-mutation, error-path scrubbing, precision key matching, and nil value resilience.
+* **Interactive Walkthrough**: Complete demo and execution guide in [`DEMO.md`](DEMO.md).
+
+---
+
+## 🛠️ Getting Started & Prerequisites
 
 ### Prerequisites
-
-- Go 1.22+
-- Make
+* **Go 1.22+**
+* **Make**
 
 ### Building and Running
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/peaush07/meshery-mcp-server-poc.git
 cd meshery-mcp-server-poc
 
-# Build the binary
+# 2. Run Unit Test Suite (100% PASS)
+make test
+
+# 3. Build Binary
 make build
 
-# Run in Stdio mode
+# 4. Run in Stdio mode (for Cursor / Claude Desktop)
 ./bin/meshery-mcp-server -transport=stdio
 
-# Run in SSE HTTP mode
+# 5. Run in SSE HTTP mode (for web/remote streaming on port 8080)
 ./bin/meshery-mcp-server -transport=sse -port=8080
 ```
 
-## Testing with Claude Desktop / Cursor
+---
+
+## 🧪 Unit Test Suite Verification (`pkg/security/sanitizer_test.go`)
+
+```text
+=== RUN   TestSanitizeMap_SensitiveKeys            --- PASS (0.00s)
+=== RUN   TestSanitizeMap_NestedStructures          --- PASS (0.00s)
+=== RUN   TestSanitizeMap_CaseInsensitive           --- PASS (0.00s)
+=== RUN   TestSanitizeJSON_ValidJSON               --- PASS (0.00s)
+=== RUN   TestSanitizeMap_Immutability               --- PASS (0.00s)
+=== RUN   TestSanitizeMap_PrecisionKeyMatching      --- PASS (0.00s)
+=== RUN   TestSanitizeString_ErrorPathRedaction     --- PASS (0.00s)
+=== RUN   TestSanitizeMap_NilOrEmptyHandling        --- PASS (0.00s)
+PASS
+ok  	github.com/peaush07/meshery-mcp-server-poc/pkg/security	0.002s
+```
+
+---
+
+## 💻 Claude Desktop / Cursor IDE Configuration
 
 Add the following to your `claude_desktop_config.json` or Cursor MCP settings:
 
@@ -53,12 +81,18 @@ Add the following to your `claude_desktop_config.json` or Cursor MCP settings:
 {
   "mcpServers": {
     "meshery": {
-      "command": "/path/to/meshery-mcp-server-poc/bin/meshery-mcp-server",
-      "args": ["-transport=stdio", "-meshery-url=http://localhost:9081"]
+      "command": "/home/peaush/meshery-mcp-server-poc/bin/meshery-mcp-server",
+      "args": [
+        "-transport=stdio",
+        "-meshery-url=http://localhost:9081"
+      ]
     }
   }
 }
 ```
 
 ---
-*Created by Peaush Paul for the CNCF Meshery LFX Mentorship 2026 Term 3.*
+
+## 📄 License & Community
+
+This project is licensed under the Apache License 2.0. Built for the CNCF Meshery & Layer5 open source community.

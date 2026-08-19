@@ -1,22 +1,31 @@
-.PHONY: build run test lint clean
+.PHONY: build test bench docker-build run-stdio run-sse clean
 
-BINARY_NAME=meshery-mcp-server
+BINARY_NAME=bin/meshery-mcp-server
 
 build:
-	@echo "Building meshery-mcp-server binary..."
-	go build -o bin/$(BINARY_NAME) main.go
-
-run: build
-	@echo "Running meshery-mcp-server..."
-	./bin/$(BINARY_NAME)
+	@echo "Building $(BINARY_NAME) binary..."
+	@mkdir -p bin
+	@go build -o $(BINARY_NAME) main.go
 
 test:
-	@echo "Running tests with coverage..."
-	go test -v -coverprofile=coverage.out ./...
+	@echo "Running Go unit test suite..."
+	@go test -v ./...
 
-lint:
-	@echo "Running golangci-lint..."
-	golangci-lint run
+bench:
+	@echo "Running Go benchmark suite..."
+	@go test -bench=. ./pkg/security
+
+docker-build:
+	@echo "Building Docker container image..."
+	@docker build -t meshery-mcp-server:latest .
+
+run-stdio: build
+	@echo "Starting meshery-mcp-server in stdio transport mode..."
+	@./$(BINARY_NAME) -transport=stdio
+
+run-sse: build
+	@echo "Starting meshery-mcp-server in SSE HTTP transport mode..."
+	@./$(BINARY_NAME) -transport=sse -port=8080
 
 clean:
-	rm -rf bin/ coverage.out
+	@rm -rf bin/
